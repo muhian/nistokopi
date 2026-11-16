@@ -1,69 +1,86 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from "react";
+import Navbar from "@/components/Navbar";
+import ProductCard from "@/components/ProductCard";
+import { loadProducts, loadWA, Product, rp } from "@/lib/products";
 
 export default function Home() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [wa, setWa] = useState("6281234567890");
+  const [q, setQ] = useState("");
+  const [cat, setCat] = useState("");
+  const [sort, setSort] = useState("nama");
+
+  useEffect(() => {
+    setProducts(loadProducts());
+    setWa(loadWA());
+  }, []);
+
+  const categories = Array.from(new Set(products.map((p) => p.category))).sort((a, b) => a.localeCompare(b, "id"));
+
+  const visible = products
+    .filter((p) => {
+      if (cat && p.category !== cat) return false;
+      const query = q.trim().toLowerCase();
+      return !query || (p.name + " " + p.description).toLowerCase().includes(query);
+    })
+    .sort((a, b) => {
+      if (sort === "murah") return a.price - b.price;
+      if (sort === "mahal") return b.price - a.price;
+      if (sort === "unggulan" && a.featured !== b.featured) return a.featured ? -1 : 1;
+      return a.name.localeCompare(b.name, "id");
+    });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <>
+      <Navbar />
+      <main className="wrap">
+        <section>
+          <div className="hero">
+            <h1 id="h-katalog" tabIndex={-1}>Biji kopi khas Banyuwangi, pesan lewat WhatsApp</h1>
+            <p>Katalog digital biji kopi lokal Banyuwangi. Cari produk, bandingkan harga, lalu kirim pesanan langsung ke penjual.</p>
+          </div>
+          <div className="toolbar">
+            <div>
+              <label htmlFor="q" className="sr">Cari produk</label>
+              <input type="search" id="q" autoComplete="off" placeholder="Cari nama atau deskripsi produk" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="f-cat" className="sr">Kategori</label>
+              <select id="f-cat" value={cat} onChange={(e) => setCat(e.target.value)}>
+                <option value="">Semua kategori</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="sort" className="sr">Urutkan</label>
+              <select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}>
+                <option value="nama">Nama A–Z</option>
+                <option value="murah">Harga termurah</option>
+                <option value="mahal">Harga termahal</option>
+                <option value="unggulan">Unggulan dulu</option>
+              </select>
+            </div>
+          </div>
+          <p className="count" aria-live="polite">{visible.length} dari {products.length} produk</p>
+          <div className="grid">
+            {visible.length === 0 ? (
+              <div className="empty" style={{ gridColumn: "1/-1" }}>
+                {products.length
+                  ? <>Tidak ada produk yang cocok. <button className="btn alt sm" type="button" style={{ marginTop: 16 }} onClick={() => { setQ(""); setCat(""); }}>Hapus filter</button></>
+                  : <>Katalog masih kosong. Tambahkan produk lewat <a href="/admin">Dashboard</a>.</>}
+              </div>
+            ) : (
+              visible.map((p) => <ProductCard key={p.id} p={p} wa={wa} />)
+            )}
+          </div>
+        </section>
       </main>
-    </div>
+      <div className="wrap">
+        <footer>Prototipe workshop Vibe Coding UMKM. Bukan sistem e-commerce: pemesanan diteruskan lewat WhatsApp dan data hanya tersimpan di browser ini.</footer>
+      </div>
+    </>
   );
 }
